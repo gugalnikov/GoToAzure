@@ -1,39 +1,31 @@
-# Go
-# Build your Go project.
-# Add steps that test, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/go
-
-trigger:
-- master
-
+# Go 
+# Build your Go project. 
+resources: 
+- repo: self 
 pool:
-  vmImage: 'ubuntu-latest'
-
-variables:
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.11' # Go installation path
-  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
-
-steps:
-- script: |
-    mkdir -p '$(GOBIN)'
-    mkdir -p '$(GOPATH)/pkg'
-    mkdir -p '$(modulePath)'
-    shopt -s extglob
-    shopt -s dotglob
-    mv !(gopath) '$(modulePath)'
-    echo '##vso[task.prependpath]$(GOBIN)'
-    echo '##vso[task.prependpath]$(GOROOT)/bin'
-  displayName: 'Set up the Go workspace'
-
-- script: |
-    go version
-    go get -v -t -d ./...
-    if [ -f Gopkg.toml ]; then
-        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-        dep ensure
-    fi
-    go build -v .
-  workingDirectory: '$(modulePath)'
-  displayName: 'Get dependencies, then build'
+   vmImage: 'vs2017-win2016'
+steps: 
+-  task: GoTool@0
+   inputs:
+     version: 1.11.5
+   displayName: 'Use Go 1.11.5'
+-  task: Go@0
+   displayName: 'go get'
+   inputs:
+     arguments: '-d'
+     workingDirectory: '$(System.DefaultWorkingDirectory)'
+-  task: Go@0
+   displayName: 'go build'
+   inputs:
+     command: build
+     arguments: '-o "$(System.TeamProject).exe"'
+     workingDirectory: '$(System.DefaultWorkingDirectory)'
+-  task: ArchiveFiles@2
+   displayName: 'Archive Files'
+   inputs:
+     rootFolderOrFile: '$(Build.Repository.LocalPath)'     
+     includeRootFolder: False 
+-  task: PublishBuildArtifacts@1
+   displayName: 'Publish Artifact'
+   inputs:
+     artifactName: drop
